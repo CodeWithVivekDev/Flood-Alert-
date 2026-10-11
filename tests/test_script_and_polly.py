@@ -7,7 +7,7 @@ from backend.shared.polly_service import PollyAudioService
 
 def test_validate_script():
     # Valid English script under 45 words
-    valid_text = "This is a Baadh Bol safety alert. River water levels are rising. Please move to higher ground."
+    valid_text = "This is a Flood Alert safety alert. River water levels are rising. Please move to higher ground."
     assert validate_script(valid_text) is True
 
     # Empty text

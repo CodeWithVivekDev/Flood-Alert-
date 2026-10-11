@@ -50,8 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="leaf-glyph">🌊</span>
           </div>
           <div className="brand-title-wrap">
-            <span className="brand-main-title">Baadh Bol</span>
-            <span className="brand-sub-tag">NATIONAL FLOOD ALERT</span>
+            <span className="brand-main-title">Flood Alert</span>
+            <span className="brand-sub-tag">बाढ़ बोल • COMMUNITY WARNING</span>
           </div>
         </div>
 

@@ -190,7 +190,7 @@ def run_server(port: int = 8000):
     seed_initial_data()
     server_address = ("127.0.0.1", port)
     httpd = HTTPServer(server_address, LocalApiHandler)
-    print(f"🌊 Baadh Bol Local API Server listening at http://127.0.0.1:{port}")
+    print(f"🌊 Flood Alert Local API Server listening at http://127.0.0.1:{port}")
     httpd.serve_forever()
 
 if __name__ == "__main__":

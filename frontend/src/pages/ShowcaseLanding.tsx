@@ -44,7 +44,7 @@ export const ShowcaseLanding: React.FC<ShowcaseLandingProps> = ({
       window.speechSynthesis.cancel();
       if (!isPlayingAudio) {
         setIsPlayingAudio(true);
-        const text = "Urgent flood warning from Baadh Bol. The Yamuna river water level at the Old Railway Bridge has reached 205.80 meters, exceeding the official danger mark of 205.53 meters. High risk in Yamuna Bazar and Kashmere Gate. Please move all livestock, essential medicines, and valuable documents to higher ground immediately. To repeat this message, press 1. To opt out, press 9.";
+        const text = "Urgent flood warning from Flood Alert. The Yamuna river water level at the Old Railway Bridge has reached 205.80 meters, exceeding the official danger mark of 205.53 meters. High risk in Yamuna Bazar and Kashmere Gate. Please move all livestock, essential medicines, and valuable documents to higher ground immediately. To repeat this message, press 1. To opt out, press 9.";
         const utter = new SpeechSynthesisUtterance(text);
         utter.rate = 0.92;
         utter.pitch = 1.0;
@@ -220,7 +220,7 @@ export const ShowcaseLanding: React.FC<ShowcaseLandingProps> = ({
             Shielding India's <span className="highlight-nature">Riverside</span> Communities Before Waters Rise.
           </h2>
           <p className="section-description">
-            When upstream barrages release heavy monsoon discharge or Himalayan tributaries breach danger thresholds, hours make the difference between safe evacuation and catastrophe. Baadh Bol bypasses the need for smartphones or internet by dispatching automated voice calls directly to citizens' phones, repeating critical evacuation instructions with keypress IVR.
+            When upstream barrages release heavy monsoon discharge or Himalayan tributaries breach danger thresholds, hours make the difference between safe evacuation and catastrophe. Flood Alert bypasses the need for smartphones or internet by dispatching automated voice calls directly to citizens' phones, repeating critical evacuation instructions with keypress IVR.
           </p>
           <div className="mission-actions">
             <button onClick={() => onNavigate('areas')} className="btn-dark-pill">
@@ -413,10 +413,10 @@ export const ShowcaseLanding: React.FC<ShowcaseLandingProps> = ({
           <div className="footer-brand-col">
             <div className="footer-brand-header">
               <span className="footer-brand-icon">🌊</span>
-              <span className="footer-brand-name">Baadh Bol</span>
+              <span className="footer-brand-name">Flood Alert</span>
             </div>
             <p className="footer-brand-desc">
-              National Flood Early-Warning &amp; Disaster Alert System for India. Dedicated to protecting riverside communities and floodplains across major Indian river basins through automated telemetry.
+              National Flood Early-Warning &amp; Disaster Alert System for India (बाढ़ बोल). Dedicated to protecting riverside communities and floodplains across major Indian river basins through automated telemetry.
             </p>
           </div>
 
@@ -462,7 +462,7 @@ export const ShowcaseLanding: React.FC<ShowcaseLandingProps> = ({
         </div>
 
         <div className="footer-bottom-row">
-          <p>© 2026 Baadh Bol / Delhi Disaster Resilience Initiative. Powered by AWS Cloud &amp; CWC Telemetry. All rights reserved.</p>
+          <p>© 2026 Flood Alert (बाढ़ बोल) / Delhi Disaster Resilience Initiative. Powered by AWS Cloud &amp; CWC Telemetry. All rights reserved.</p>
         </div>
       </footer>
     </div>

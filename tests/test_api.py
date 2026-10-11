@@ -51,7 +51,7 @@ def test_api_health_check():
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["status"] == "healthy"
-    assert "Baadh Bol" in body["service"]
+    assert "Flood Alert" in body["service"]
 
 def test_api_areas_crud_and_river_level():
     # 1. List areas

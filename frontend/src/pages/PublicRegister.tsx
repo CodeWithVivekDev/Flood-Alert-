@@ -84,7 +84,7 @@ export const PublicRegister: React.FC<PublicRegisterProps> = ({ areas, onBackToA
               🌊
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-              Baadh Bol: Citizen Flood Alert Service
+              Flood Alert: Citizen Voice Warning Service
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '6px' }}>
               Receive automated phone calls if water levels rise in the Yamuna river. Works on any basic mobile phone—no app required!

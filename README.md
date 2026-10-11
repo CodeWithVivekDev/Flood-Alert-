@@ -1,4 +1,4 @@
-# बाढ़ बोल (Baadh Bol) — Community Voice Disaster Alert Platform
+# Flood Alert (बाढ़ बोल) — Community Voice Disaster Alert Platform
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/CodeWithVivekDev/Flood-Alert-)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
@@ -8,7 +8,7 @@
 [![AWS SAM](https://img.shields.io/badge/AWS-Serverless_SAM-orange.svg)](https://aws.amazon.com/serverless/sam/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Accessible, voice-first early warning system for vulnerable communities in Delhi-NCR.**  
+> **Accessible, voice-first early warning system for vulnerable communities in Delhi-NCR (बाढ़ बोल / Flood Alert).**  
 > Delivering real-time, actionable **Hindi-language voice calls** to residents without smartphones or internet connectivity by combining Central Water Commission (CWC) river gauges, Open-Meteo rainfall forecasts, and NDMA Sachet disaster alerts.
 
 ---
@@ -38,7 +38,7 @@
 
 During monsoon floods along the Yamuna River and severe winter smog episodes across Delhi-NCR, the most vulnerable citizens—slum dwellers, daily wage workers, and elderly riverside residents—often lack smartphones, active internet connections, or literacy in written disaster bulletins.
 
-**बाढ़ बोल (Baadh Bol)** bridges this life-critical gap. It empowers disaster responders, NGOs, and Resident Welfare Associations (RWAs) to ingest live hydrological and meteorological telemetry, calculate composite hazard risks, synthesize concise Hindi voice instructions using generative AI, and dispatch automated phone calls to citizens' basic feature phones in seconds.
+**Flood Alert (बाढ़ बोल / Baadh Bol)** bridges this life-critical gap. It empowers disaster responders, NGOs, and Resident Welfare Associations (RWAs) to ingest live hydrological and meteorological telemetry, calculate composite hazard risks, synthesize concise Hindi voice instructions using generative AI, and dispatch automated phone calls to citizens' basic feature phones in seconds.
 
 ---
 
@@ -110,7 +110,7 @@ The platform operates across four decoupled serverless layers:
 
 ## 🔬 Multi-Source Warning Intelligence
 
-Baadh Bol's warning engine aggregates real-time signals from three authoritative data sources to calculate composite risk:
+Flood Alert's warning engine aggregates real-time signals from three authoritative data sources to calculate composite risk:
 
 | Source | Endpoint / Protocol | Metrics Ingested | Hazard Trigger |
 |---|---|---|---|
@@ -338,7 +338,7 @@ sam deploy --guided
 ```
 
 When prompted by the guided deployment:
-- **Stack Name**: `baadh-bol-stack`
+- **Stack Name**: `flood-alert-stack`
 - **AWS Region**: `ap-south-1`
 - **Parameter Environment**: `prod` (or `dev`)
 - **Parameter CallProvider**: `mock`, `twilio`, or `connect`

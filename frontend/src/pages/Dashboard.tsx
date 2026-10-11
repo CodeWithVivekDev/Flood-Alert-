@@ -77,7 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (soundResult.triggered) {
         setNewCriticalNotice(`CRITICAL WARNING: ${soundResult.headline || 'High flood risk detected'}`);
         DesktopNotifications.dispatchNotification(
-          'CRITICAL FLOOD ALERT - Baadh Bol',
+          'CRITICAL FLOOD ALERT - Flood Alert',
           soundResult.headline || 'A monitored river basin has crossed danger threshold.'
         );
       }
@@ -123,7 +123,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setNotifPermission(granted ? 'granted' : 'denied');
     if (granted) {
       DesktopNotifications.dispatchNotification(
-        'Baadh Bol Notifications Enabled',
+        'Flood Alert Notifications Enabled',
         'You will now receive desktop alerts for critical flood breaches across India.'
       );
     }

@@ -1,5 +1,5 @@
 """
-Tests for Baadh Bol Live Flood Data, Automatic Warning Engine, and Safe Alert System:
+Tests for Flood Alert (Baadh Bol) Live Flood Data, Automatic Warning Engine, and Safe Alert System:
 - Central Water Commission (CWC) station thresholds, staleness, and network failure fallback.
 - NDMA SACHET CAP v1.2 alerts, WAF handling, and schema validation.
 - Open-Meteo weather forecasts and GloFAS modelled river discharge labels.

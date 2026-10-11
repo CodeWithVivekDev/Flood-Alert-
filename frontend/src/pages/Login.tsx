@@ -53,7 +53,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             🌊
           </div>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-            Baadh Bol Operator Portal
+            Flood Alert Operator Portal
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '4px' }}>
             Cognito RBAC • Emergency Operations Dashboard

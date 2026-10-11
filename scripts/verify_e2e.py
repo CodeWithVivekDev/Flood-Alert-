@@ -22,7 +22,7 @@ from backend.notifier.app import lambda_handler as notifier_handler
 
 def run_e2e_verification():
     print("=" * 65)
-    print("🌊 BAADH BOL - END-TO-END VERIFICATION RUN")
+    print("🌊 FLOOD ALERT (BAADH BOL) - END-TO-END VERIFICATION RUN")
     print("=" * 65)
 
     # 1. Health Check

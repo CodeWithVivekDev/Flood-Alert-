@@ -103,7 +103,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if path == "/health" and http_method == "GET":
             return build_response(200, {
                 "status": "healthy",
-                "service": "Baadh Bol API",
+                "service": "Flood Alert (Baadh Bol) API",
                 "environment": Config.ENVIRONMENT,
                 "region": Config.AWS_REGION,
                 "callProvider": Config.CALL_PROVIDER

@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Baadh Bol: Accessible Disaster-Alert Platform
+  Flood Alert: Community Voice Disaster-Alert Platform (Baadh Bol)
   AWS Serverless Architecture (SAM) for automated risk monitoring and Hindi voice alerting.
 
 Parameters:

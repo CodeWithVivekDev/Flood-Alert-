@@ -102,7 +102,7 @@ export const App: React.FC = () => {
         {loading ? (
           <div className="loading-state-container">
             <div className="loading-leaf-spin">🌱</div>
-            <span>Loading Baadh Bol Telemetry...</span>
+            <span>Loading Flood Alert Telemetry...</span>
           </div>
         ) : (
           <>
