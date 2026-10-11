@@ -1,0 +1,518 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Baadh Bol: Accessible Disaster-Alert Platform
+  AWS Serverless Architecture (SAM) for automated risk monitoring and Hindi voice alerting.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Deployment stage environment.
+  CallProvider:
+    Type: String
+    Default: mock
+    AllowedValues: [mock, twilio, connect]
+    Description: Outbound calling provider to activate.
+  TestAllowlistPhones:
+    Type: String
+    Default: "+919876543210"
+    Description: Comma-separated list of allowlisted phones eligible for test calls.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+    Tracing: Active
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        AREAS_TABLE: !Ref AreasTable
+        RESIDENTS_TABLE: !Ref ResidentsTable
+        ALERTS_TABLE: !Ref AlertsTable
+        CALLS_TABLE: !Ref CallsTable
+        AUDIO_BUCKET_NAME: !Ref AudioBucket
+        ALERT_QUEUE_URL: !Ref AlertQueue
+        CALL_PROVIDER: !Ref CallProvider
+        TEST_ALLOWLIST_PHONES: !Ref TestAllowlistPhones
+        BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
+        POLLY_VOICE_ID: Kajal
+        POLLY_ENGINE: neural
+        AUTO_CALL_ENABLED: "false"
+        CWC_API_URL: "https://ffs.india-water.gov.in/api/v1/water-levels"
+        NDMA_SACHET_FEED_URL: "https://sachet.ndma.gov.in/cap_feed/"
+        OPEN_METEO_BASE_URL: "https://api.open-meteo.com/v1/forecast"
+        OPEN_METEO_FLOOD_URL: "https://flood-api.open-meteo.com/v1/flood"
+
+Resources:
+  # ==========================================
+  # DYNAMODB TABLES
+  # ==========================================
+  AreasTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "BaadhBol-Areas-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: areaId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: areaId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  ResidentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "BaadhBol-Residents-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: residentId
+          AttributeType: S
+        - AttributeName: areaId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: residentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: AreaIndex
+          KeySchema:
+            - AttributeName: areaId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  AlertsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "BaadhBol-Alerts-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: alertId
+          AttributeType: S
+        - AttributeName: areaId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: alertId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: AreaAlertsIndex
+          KeySchema:
+            - AttributeName: areaId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  CallsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "BaadhBol-Calls-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: callId
+          AttributeType: S
+        - AttributeName: alertId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: callId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: AlertCallsIndex
+          KeySchema:
+            - AttributeName: alertId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+
+  # ==========================================
+  # S3 AUDIO & STATIC ASSETS
+  # ==========================================
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "baadh-bol-audio-${AWS::AccountId}-${AWS::Region}-${Environment}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireTemporaryAudio
+            Status: Enabled
+            ExpirationInDays: 30
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "baadh-bol-frontend-${AWS::AccountId}-${AWS::Region}-${Environment}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FrontendOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "BaadhBol-OAC-${Environment}"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "s3:GetObject"
+            Effect: Allow
+            Resource: !Sub "${FrontendBucket.Arn}/*"
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}"
+
+  FrontendDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Origins:
+          - Id: FrontendS3Origin
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt FrontendOAC.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+        DefaultCacheBehavior:
+          TargetOriginId: FrontendS3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+  # ==========================================
+  # COGNITO USER POOL & AUTH
+  # ==========================================
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "BaadhBol-Operators-${Environment}"
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "BaadhBol-WebClient-${Environment}"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  AdminUserGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: admin
+      Description: Administrators with full edit and alert trigger rights
+      UserPoolId: !Ref CognitoUserPool
+
+  ViewerUserGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: viewer
+      Description: Read-only operators
+      UserPoolId: !Ref CognitoUserPool
+
+  # ==========================================
+  # SQS QUEUES
+  # ==========================================
+  AlertDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "BaadhBol-Alerts-DLQ-${Environment}"
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  AlertQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "BaadhBol-Alerts-Queue-${Environment}"
+      VisibilityTimeout: 120
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AlertDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  # ==========================================
+  # API GATEWAY & LAMBDA FUNCTIONS
+  # ==========================================
+  BaadhBolApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: backend.api.app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AreasTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ResidentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AlertsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CallsTable
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - polly:SynthesizeSpeech
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        # Public Endpoints
+        HealthCheck:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+        PublicRegister:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /register
+            Method: POST
+            Auth:
+              Authorizer: NONE
+        CallCallback:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /calls/callback
+            Method: POST
+            Auth:
+              Authorizer: NONE
+        # Authenticated Endpoints
+        AreasGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /areas
+            Method: GET
+        AreasPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /areas
+            Method: POST
+        AreasPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /areas/{id}
+            Method: PUT
+        RiverLevelPut:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /areas/{id}/river-level
+            Method: PUT
+        ResidentsGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /residents
+            Method: GET
+        ResidentsPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /residents
+            Method: POST
+        ResidentsImport:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /residents/import
+            Method: POST
+        ResidentsDelete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /residents/{id}
+            Method: DELETE
+        AlertsGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /alerts
+            Method: GET
+        AlertCallsGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /alerts/{id}/calls
+            Method: GET
+        SimulatePost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /simulate
+            Method: POST
+        LiveTelemetryGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /live-telemetry
+            Method: GET
+            Auth:
+              Authorizer: NONE
+        DemoAlertPost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BaadhBolApi
+            Path: /demo-alert
+            Method: POST
+
+  RiskEngineFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: backend.risk_engine.app.lambda_handler
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AreasTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AlertsTable
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt AlertQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - polly:SynthesizeSpeech
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        ScheduledRiskCheck:
+          Type: Schedule
+          Properties:
+            Schedule: rate(30 minutes)
+            Name: !Sub "BaadhBol-RiskSchedule-${Environment}"
+            Description: Periodic risk calculation every 30 minutes.
+            Enabled: true
+
+  NotifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: backend.notifier.app.lambda_handler
+      Timeout: 90
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ResidentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AlertsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CallsTable
+        - S3ReadPolicy:
+            BucketName: !Ref AudioBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - connect:StartOutboundVoiceContact
+              Resource: "*"
+      Events:
+        AlertQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AlertQueue.Arn
+            BatchSize: 5
+
+Outputs:
+  ApiEndpoint:
+    Description: Base API Gateway endpoint URL
+    Value: !Sub "https://${BaadhBolApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !Ref CognitoUserPoolClient
+  AudioBucketName:
+    Description: Audio storage S3 bucket
+    Value: !Ref AudioBucket
+  CloudFrontEndpoint:
+    Description: CloudFront distribution domain for React frontend
+    Value: !Sub "https://${FrontendDistribution.DomainName}"
+  FrontendBucketName:
+    Description: S3 bucket hosting React static distribution
+    Value: !Ref FrontendBucket
